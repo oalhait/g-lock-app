@@ -23,9 +23,19 @@ faces = faceCascade.detectMultiScale(
 
 print("Found {0} faces!".format(len(faces)))
 
+#Resize image to 120 pixels
+
 # Draw a rectangle around the faces
 for (x, y, w, h) in faces:
-    cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+	# extraw = (120 - w)//2
+	# extrah = (120 - h)//2
+	# newy = y - extrah
+	# newx = x - extraw
+	# cropped = gray[newy:newy+h+(2*extrah), newx:newx+w+(2*extraw)]
+	cropped = gray[y:y+h, x:x+w]
+	final = cv2.resize(cropped, (120,120))
+	# cv2.rectangle(gray, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-cv2.imshow("Faces found", image)
+print(final)
+cv2.imshow("Faces found", final)
 cv2.waitKey(0)
