@@ -2,7 +2,16 @@ import sys
 import csv
 import numpy as np 
 
+'''
+To do:
+-Write Main function
+-Figure out how to map inputs to input neurons
+-map outputs to output vector
+-Test Feedforwar
+-Cost Function
+-Backpropogation
 
+'''
 
 
 #Sigmoid function given a vector returns an output vector with sigmoid applied
@@ -29,8 +38,9 @@ class NN(object):
 		self.layer_count = layers
 		self.orientation = orientation
 		self.layers = self.orient()
-		self.input = data
+		self.inputs = data
 		self.labels = labels
+		self.length = len(data)
 
 	#Creates layers except for input layer and adds to NN
 	def orient(self):
@@ -38,6 +48,14 @@ class NN(object):
 		for i in range(1, self.layers):
 			network.append(NN_layer(orientation[i]))
 		return network
+
+	#Given a sequence number return a tuple of single array input and its labek
+	def input(self, current):
+		image, label = self.data[current]
+		vector = np.reshape(image, 14400)
+
+		#return tuple of input vector and correct label
+		return(vector, label)
 
 	#Checks the last layer for highest output and return that
 	def output(self):
@@ -67,6 +85,13 @@ def Learn(Neural_Network, epochs, learning_rate):
 	#Learn for number of epochs
 	for i in range(epochs):
 
+		#Loop through all inputs
+		for j in range(Neural_Network.length):
+			in_layer, label = Neural_Network.input(j)
+
+			#Feedforward with input layer and first layer
+			
+
 	
 
 #Once Feeding Forward is complete, backpropogate the error
@@ -76,3 +101,7 @@ def SGD():
 #Main function
 if __name__ == '__main__':
 	#Need to set up initial input layer and add to front of NN object
+	input_train = sys.argv[1]
+	input_validation = sys.argv[2]
+	output_train = sys.argv[3]
+	output_validation = sys.argv[4]

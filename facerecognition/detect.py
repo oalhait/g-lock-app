@@ -1,6 +1,14 @@
 import cv2
 import sys
 
+'''
+To Do:
+-Given a folder of images, convert all of them into grayscale
+numpy arrays and pass through to neural network for training.
+
+-Pass label of who it is by looking at the name of the file.
+'''
+
 # Get user supplied values
 imagePath = sys.argv[1]
 cascPath = "haarcascade_frontalface_default.xml"
@@ -24,7 +32,6 @@ faces = faceCascade.detectMultiScale(
 print("Found {0} faces!".format(len(faces)))
 
 #Resize image to 120 pixels
-
 # Draw a rectangle around the faces
 for (x, y, w, h) in faces:
 	# extraw = (120 - w)//2
@@ -36,6 +43,5 @@ for (x, y, w, h) in faces:
 	final = cv2.resize(cropped, (120,120))
 	# cv2.rectangle(gray, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-print(final)
 cv2.imshow("Faces found", final)
 cv2.waitKey(0)
