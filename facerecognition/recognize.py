@@ -1,6 +1,7 @@
 # import the necessary packages
 from imutils.video import VideoStream
 from imutils.video import FPS
+from fabric.api import run
 import face_recognition
 import argparse
 import imutils
@@ -67,6 +68,7 @@ while True:
 
                 # check to see if we have found a match
                 if True in matches:
+
                         # find the indexes of all matched faces then initialize a
                         # dictionary to count the total number of times each face
                         # was matched
