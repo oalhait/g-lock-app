@@ -4,8 +4,8 @@ import time
 #GPIO Mode (BOARD / BCM)
 GPIO.setmode(GPIO.BCM)
  #set GPIO Pins
-GPIO_TRIGGER = 6 
-GPIO_ECHO = 26
+GPIO_TRIGGER = 5 
+GPIO_ECHO = 6
    
 #set GPIO direction (IN / OUT)
 GPIO.setup(GPIO_TRIGGER, GPIO.OUT)

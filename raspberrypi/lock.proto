@@ -1,0 +1,16 @@
+syntax = "proto3";
+package lock;
+
+service GLOCK {
+	rpc Unlock (GlockRequest) returns (GlockResponse) {}
+	rpc Lock (GlockRequest) returns (GlockResponse) {}
+} 
+
+message GlockRequest {
+}
+
+message GlockResponse{
+	string message = 1;
+}
+
+
