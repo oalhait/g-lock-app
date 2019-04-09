@@ -1,5 +1,7 @@
 import cv2
 import sys
+import os
+import numpy as np
 
 '''
 To Do:
@@ -9,39 +11,48 @@ numpy arrays and pass through to neural network for training.
 -Pass label of who it is by looking at the name of the file.
 '''
 
-# Get user supplied values
-imagePath = sys.argv[1]
-cascPath = "haarcascade_frontalface_default.xml"
+def detect_face(path=os.curdir):
+	data = []
 
-# Create the haar cascade
-faceCascade = cv2.CascadeClassifier(cascPath)
+	#Iterate through files in folders 
+	for file in os.listdir(path):
+		filename = os.fsdecode(file)
+		if filename.endswith(".jpeg") or filename.endswith(".jpg"):
+			print(filename)
+			final = detect_face_file(filename)
+		
+			#Append to data list
+			data.append(final)
 
-# Read the image
-image = cv2.imread(imagePath)
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	return np.array(data)
 
-# Detect faces in the image
-faces = faceCascade.detectMultiScale(
-    gray,
-    scaleFactor=1.1,
-    minNeighbors=5,
-    minSize=(30, 30)
-    #flags = cv2.CV_HAAR_SCALE_IMAGE
-)
 
-print("Found {0} faces!".format(len(faces)))
 
-#Resize image to 120 pixels
-# Draw a rectangle around the faces
-for (x, y, w, h) in faces:
-	# extraw = (120 - w)//2
-	# extrah = (120 - h)//2
-	# newy = y - extrah
-	# newx = x - extraw
-	# cropped = gray[newy:newy+h+(2*extrah), newx:newx+w+(2*extraw)]
-	cropped = gray[y:y+h, x:x+w]
-	final = cv2.resize(cropped, (120,120))
-	# cv2.rectangle(gray, (x, y), (x+w, y+h), (0, 255, 0), 2)
+def detect_face_file(file):
+	cascPath = "haarcascade_frontalface_default.xml"
+	# Create the haar cascade
+	faceCascade = cv2.CascadeClassifier(cascPath)
+	image = cv2.imread(file)
+	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	# Detect faces in the image
+	faces = faceCascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5,minSize=(30, 30))
+	# Draw a rectangle around the faces
+	for (x, y, w, h) in faces:
+		print("Found a face!")
+		#Resize image to 120 pixels
+		cropped = gray[y:y+h, x:x+w]
+		final = np.array(cv2.resize(cropped, (120,120)))
+	return final
 
-cv2.imshow("Faces found", final)
-cv2.waitKey(0)
+
+
+
+#Main function
+if __name__ == '__main__':
+	# Get user supplied values
+	#imagePath = sys.argv[1]
+	finall = detect_face()
+	print("Faces found: ", len(finall))
+	cv2.imshow("Image", finall[0])
+	cv2.waitKey(0)
+	
