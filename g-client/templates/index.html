@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>G-Lock Home</title>
+<!-- Meta tag Keywords -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="keywords" content="connect error page Widget a Flat Responsive Widget,Login form widgets, Sign up Web forms , Login signup Responsive web form,Flat Pricing table,Flat Drop downs,Registration Forms,News letter Forms,Elements" />
+<script type="application/x-javascript"> addEventListener("load", function() { setTimeout(hideURLbar, 0); }, false);
+function hideURLbar(){ window.scrollTo(0,1); } </script>
+<!-- Meta tag Keywords -->
+<link rel="stylesheet" href="../static/style.css" type="text/css" media="all" /><!-- Style-CSS -->
+<link rel="stylesheet" href="../static/font-awesome.min.css" type="text/css" media="all" />
+<link href="../static/popup-box.css" rel="stylesheet" type="text/css" media="all" />
+<link href="//fonts.googleapis.com/css?family=Gafata" rel="stylesheet">
+<link href="//fonts.googleapis.com/css?family=PT+Sans" rel="stylesheet">
+</head>
+<body>
+<section  class="agile-main">
+	<header><h1>Welcome to G-Lock</h1></header>
+</section>
+
+<!-- <video width="320" height="240" align="center" controls>
+  <source src="http://192.168.1.56:9090/stream/video.mjpeg" type="video/mjpeg">
+  Your browser does not support the video tag.
+</video>
+ -->
+<div class="div_img">
+	<img class="vid_img" src="http://192.168.1.56:9090/stream/video.mjpeg" alt="image" width="853" height="480">
+
+</div>
+
+<section  class="agile-main">
+	<div class="agile-top">
+		<span>Live G-Lock Video Feed</span>
+	</div>
+
+	<div class="agile-buttons">
+		<form action="/unlock_request/" method="post">
+    		<button class="go" type="submit"><a>Unlock</a></button>
+		</form>
+	</div>
+	<div class="agile-buttons">
+
+		<button class="us"><a  class="w3_play_icon1" href="#">View Logs</a></button>
+	</div>
+	<div class="agile-buttons">
+		<form action="/logout/" method="post">
+    		<button class="logo" type="submit"><a>Logout</a></button>
+		</form>
+	</div>
+<!-- 	<div class="footer">
+			<p>&copy; 2018 connect error page. All rights reserved | Design by <a href="http://w3layouts.com" target="_blank">W3layouts</a></p>
+		</div> -->
+</section>
+<div id="small-dialog1" class="mfp-hide">
+<div class="header-form1">
+<div class="flat-left">
+			<h2>contact us</h2>
+			<span>please fill out this form we will get back you shortly</span>
+			<form action="#" method="post">
+				<p>username</p>
+				<label><i class="fa fa-user-o" aria-hidden="true"></i></label>
+				<input type="text" name="username" placeholder="enter your name" required="">
+				<p>email address</p>
+				<label><i class="fa fa-key" aria-hidden="true"></i></label>
+				<input type="email" name="email" placeholder="enter your email" required="">
+				<p>subject</p>
+				<label><i class="fa fa-comments" aria-hidden="true"></i></label>
+				<input type="text" name="subject" placeholder="eg:tech team" required="">
+				<p>message</p>
+				<textarea placeholder="enter your message"></textarea>
+				<input type="submit" value="">
+			
+			</form>
+		</div>
+
+</div>	
+</div>
+<script src="../static/jquery-2.1.4.min.js"></script>
+<script src="../static/jquery.magnific-popup.js"></script>
+<script>
+		$(document).ready(function() {
+		$('.w3_play_icon,.w3_play_icon1,.w3_play_icon2').magnificPopup({
+			type: 'inline',
+			fixedContentPos: false,
+			fixedBgPos: true,
+			overflowY: 'auto',
+			closeBtnInside: true,
+			preloader: false,
+			midClick: true,
+			removalDelay: 300,
+			easing: 'ease-in-out', 
+			mainClass: 'my-mfp-zoom-in'
+		});
+																		
+		});
+</script>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script type=text/javascript>
+        $(function() {
+          $('.go').bind('click', function() {
+            $.getJSON('/unlock_request',
+                function(data) {
+              //do nothing
+            });
+        return false;
+      });
+    });
+</script>
+<script type=text/javascript>
+        $(function() {
+          $('.logo').bind('click', function() {
+            $.getJSON('/logout',
+                function(data) {
+              //do nothing
+            });
+        return false;
+      });
+    });
+</script>
+
+</body>
+</html>
