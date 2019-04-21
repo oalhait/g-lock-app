@@ -11,11 +11,13 @@ To do:
 -Cost Function
 -Backpropogation
 
+-Call into detect script eventually
+
 '''
 
 
 #Sigmoid function given a vector returns an output vector with sigmoid applied
-def sigmoid():
+def sigmoid(vector):
 	rows = vector.shape[0]
 	ones = np.ones(rows)
 	return np.divide(ones, (ones + np.exp(np.negative(vector))))
@@ -34,25 +36,24 @@ def calculate_error():
 
 #Neural Network Overall Class
 class NN(object):
-	def __init__(self, layers, orientation, data, labels):
+	def __init__(self, layers, orientation, data):
 		self.layer_count = layers
 		self.orientation = orientation
 		self.layers = self.orient()
 		self.inputs = data
-		self.labels = labels
 		self.length = len(data)
 
 	#Creates layers except for input layer and adds to NN
 	def orient(self):
 		network = [];
 		for i in range(1, self.layers):
-			network.append(NN_layer(orientation[i]))
+			network.append(NN_layer(self.orientation[i]))
 		return network
 
 	#Given a sequence number return a tuple of single array input and its labek
 	def input(self, current):
 		image, label = self.data[current]
-		vector = np.reshape(image, 14400)
+		vector = np.reshape(image, (self.orientation[0], 1))
 
 		#return tuple of input vector and correct label
 		return(vector, label)
@@ -89,19 +90,50 @@ def Learn(Neural_Network, epochs, learning_rate):
 		for j in range(Neural_Network.length):
 			in_layer, label = Neural_Network.input(j)
 
-			#Feedforward with input layer and first layer
-			
+			#Set inputs to output of input layer
+			Neural_Network.layers[0].output = in_layer
+			layers = Neural_Network.layer_count
 
+			#Feedforward the 3 next layers.
+			else:
+				for k in range(1,layers):
+					prev = Neural_Network.layers[k-1]
+
+					#If last layer we have an activation of softmax
+					if k == layers:
+						Neural_Network.layers[k].FeedForward(prev, "softmax")
+					else:
+						Neural_Network.layers[k].FeedForward(prev, "sigmoid")
+
+			#Based on feedforward determine the error with input
+			guess = Neural_Network.output()
+			err = calculate_error(guess, label)
+
+			#Compute backpropogation to update network weights
+			#Blah backprop
+
+	#Return trained Neural Network
+	return Neural_Network
 	
-
-#Once Feeding Forward is complete, backpropogate the error
-def SGD():
-	pass
 
 #Main function
 if __name__ == '__main__':
-	#Need to set up initial input layer and add to front of NN object
-	input_train = sys.argv[1]
-	input_validation = sys.argv[2]
-	output_train = sys.argv[3]
-	output_validation = sys.argv[4]
+	#Grab inputs from commandline
+	input_layer = sys.argv[1]
+	first_hidden = sys.argv[2]
+	second_hidden = sys.argv[3]
+	output_layer = sys.argv[4]
+	input_location = sys.argv[5]
+	epoch = sys.argv[6]
+	rate = sys.argv[7]
+
+	#Call detect script to parse input data
+	#detect blah
+
+	#Create the Neural Network Object and pass it in to Function
+	NeuralN = NN(4, [input_layer, first_hidden, second_hidden, output_layer], inputdata)
+
+	#Learn with NN
+	NewNN = Learn(NN, epoch, rate)
+
+
