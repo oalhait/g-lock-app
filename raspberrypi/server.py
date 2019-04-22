@@ -13,7 +13,11 @@ import grpc
 import lock_pb2
 import lock_pb2_grpc
 import UTILS as utils
-
+from imutils.video import VideoStream
+from imutils.video import FPS
+from nn import find_face
+import imutils
+import cv2
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
@@ -35,11 +39,13 @@ class Glock(object):
 
 
         self.kp_thread = None
+        self.camera_thread = None
         self.main_thread = None
         self.idle_thread = None
 
 
         self.kp_stop_signal = None
+        self.camera_stop_signal = None
         self.main_stop_signal = None
         self.idle_stop_signal = None
         self.idle_blue_signal = Event()
@@ -102,8 +108,8 @@ class Glock(object):
         return distance
 
 
-    def unlock_success(self):
-        print("unlock_success")
+    def led_unlock_success(self):
+        print("led_unlock_success")
 
         if self.idle_stop_signal!=None:
             self.idle_stop_signal.set()
@@ -125,9 +131,9 @@ class Glock(object):
 
 
 
-    def unlock_fail(self):
+    def led_unlock_fail(self):
         #pulse three on fail
-        print("unlock_fail")
+        print("led_unlock_fail")
 
         if self.idle_stop_signal!=None:
             self.idle_stop_signal.set()
@@ -192,7 +198,7 @@ class Glock(object):
 
     def Validated(self):
         #add mutex on gpio ops?
-        self.unlock_success()
+        self.led_unlock_success()
 
         # GPIO.output(self.LED_PIN,GPIO.HIGH)
         # time.sleep(5)
@@ -208,9 +214,56 @@ class Glock(object):
 
     def Invalidated(self):
         #add mutex on gpips?
-        self.unlock_fail
+        self.led_unlock_fail
 
 
+    def CameraHandler(self):
+        # initialize the video stream and allow the camera sensor to warm up
+        print("[INFO] starting video stream...")
+        vs = VideoStream(usePiCamera=True).start()
+        time.sleep(2.0)
+         
+        # start the FPS counter
+        fps = FPS().start()
+
+        result_count = 0 #dont verfiy until three frames are in agreement
+        while not self.camera_stop_signal.wait(0):
+            frame = vs.read()
+            print("got frame")
+            # display the image to our screen
+
+
+            # cv2.imshow("Frame", frame)
+
+            key = cv2.waitKey(1) & 0xFF
+
+            # update the FPS counter
+            result_count += find_face(frame)
+
+            if (result_count == 3): 
+                self.Validated()
+                self.ran_validation = True
+                return
+
+
+            elif (result_count == -3):
+                self.Invalidated()
+                self.ran_validation = True
+                return
+
+            else:
+                continue
+
+
+            fps.update()
+
+        # stop the timer and display FPS information
+        fps.stop()
+        print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+        print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+         
+        # do a bit of cleanup
+        vs.stop()
 
     def KeypadHandler(self):
         print("Enter KeypadHandler")
@@ -349,6 +402,10 @@ class Glock(object):
                 self.kp_thread = Thread(target=self.KeypadHandler)
                 self.kp_thread.start()
 
+                # self.camera_stop_signal = Event()
+                # self.camera_thread = Thread(target=self.CameraHandler)
+                # self.camera_thread.start()
+
 
                 print("idlewake")
             elif(max(distances)<60 and self.ran_validation==True):
@@ -369,11 +426,13 @@ class Glock(object):
                 self.idle_blue_signal.clear()
                 self.idle_stop_signal.set()
                 self.kp_stop_signal.set()
+                self.camera_stop_signal.set()
 
                 self.idle_thread.join()
 
 
                 self.kp_thread.join()
+                self.camera_thread.join()
 
                 self.pixels.fill((0, 0, 0))
                 self.pixels.show()
@@ -398,6 +457,10 @@ class Glock(object):
         self.keypad = keypad.keypad_setup()
         self.GPIO_TRIGGER, self.GPIO_ECHO = sonic.sonic_setup()
 
+        self.camera_stop_signal = Event()
+        self.camera_thread = Thread(target=self.CameraHandler)
+        self.camera_thread.start()
+
         self.main_stop_signal = Event()
         self.main_thread = Thread(target=self.MainHandler)
         self.main_thread.start()
@@ -417,9 +480,15 @@ class Glock(object):
 
         print("stopping threads")
         self.kp_stop_signal.set()
+        self.camera_stop_signal.set()
+
+
         self.main_stop_signal.set()
 
+        self.camera_thread.join()
+
         self.kp_thread.join()
+
         self.main_thread.join()
 
 
