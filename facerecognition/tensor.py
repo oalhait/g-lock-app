@@ -70,7 +70,7 @@ if __name__ == '__main__':
 	# dataset = tf.data.Dataset.from_tensor_slices((input_current, labels_current))
 	# iterator = dataset.make_initializable_iterator()
 
-	in_data = detect_face()
+	in_data, labels = detect_face()
 
 	#Initialize model based on architecture we desire
 	NN = Neuron_Network(input_layer, first_hidden, second_hidden, output_layer)
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 						loss='sparse_categorical_crossentropy', 
 						metrics=['accuracy'])
 	
-	NN.model.fit(x=in_data, y=[0,1,2,3], epochs=epoch)
+	NN.model.fit(x=in_data, y=labels, epochs=epoch)
 
 	#Call method Fit in order to begin training.
 	# NN.model.fit(iterator, epochs=epoch, 
