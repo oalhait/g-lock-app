@@ -8,6 +8,7 @@ from tensorflow import keras
 
 #Import numpy and pyplot
 import numpy as np
+import matplotlib.pyplot as plt
 
 #Import detect.py for opencv
 from detect import detect_face
@@ -35,7 +36,8 @@ class Neuron_Network(object):
 			keras.layers.Dense(self.out_neurons, activation="softmax")])
 
 	def predict(self, imagepath):
-		img = detect_face_file(imagepath)
+		#np.divide(detect_face_file(imagepath), 255.0)
+		img = np.divide(detect_face_file(imagepath), 255.0)
 		image = (np.expand_dims(img,0))
 		prediction = self.model.predict(image)
 		print(prediction[0])
@@ -70,7 +72,17 @@ if __name__ == '__main__':
 	# dataset = tf.data.Dataset.from_tensor_slices((input_current, labels_current))
 	# iterator = dataset.make_initializable_iterator()
 
-	in_data, labels = detect_face()
+	# in_data, labels, valdata, vallabel = detect_face()
+	in_data = np.load("datadec.npy")
+	labels = np.load("labeldec.npy")
+	valdata = np.load("valdatadec.npy")
+	vallabel = np.load("validlabeldec.npy")
+
+	#255 instead of decimals
+	# in_data = np.load("data.npy")
+	# labels = np.load("label.npy")
+	# valdata = np.load("valdata.npy")
+	# vallabel = np.load("validlabel.npy")
 
 	#Initialize model based on architecture we desire
 	NN = Neuron_Network(input_layer, first_hidden, second_hidden, output_layer)
@@ -80,9 +92,9 @@ if __name__ == '__main__':
 						loss='sparse_categorical_crossentropy', 
 						metrics=['accuracy'])
 	
-	NN.model.fit(x=in_data, y=labels, epochs=epoch)
+	NN.model.fit(x=in_data, y=labels, validation_data=(valdata, vallabel), epochs=epoch)
 
-	file_name = str(input_layer)+","+str(first_hidden)+","+str(second_hidden)+","+str(output_layer)+","+str(epoch)
+	file_name = str(input_layer)+","+str(first_hidden)+","+str(second_hidden)+","+str(output_layer)+","+str(epoch)+"xd"
 
 	NN.model.save(file_name)
 
