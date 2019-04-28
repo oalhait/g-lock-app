@@ -2,7 +2,7 @@ import cv2
 import sys
 import os
 import numpy as np
-
+from time import sleep
 '''
 To Do:
 -Given a folder of images, convert all of them into grayscale
@@ -69,6 +69,8 @@ def detect_face_frame(image):
     faceCascade = cv2.CascadeClassifier(cascPath)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+    print("frame processing...")
+    # cv2.destroyAllWindows()
     # Detect faces in the image
     faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
@@ -87,7 +89,11 @@ def detect_face_frame(image):
         print("Found a face!")
         #Resize image to 120 pixels
         cropped = gray[y:y+h, x:x+w]
-        final = np.array(cv2.resize(cropped, (120,120)))
+        final = np.array(cv2.resize(cropped, (100,100)))
+
+        cv2.imshow( "Display WIndow" , final)
+        cv2.waitKey(0)  
+        cv2.destroyAllWindows()
     return final
 
 def detect_face_file(file):
@@ -99,27 +105,28 @@ def detect_face_file(file):
     image = cv2.imread(file)   
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     cv2.imshow( "Display WIndow" , gray)
-    cv2.waitKey(0) 
+    cv2.waitKey(0)  
+    cv2.destroyAllWindows()
+
 
     # Detect faces in the image
-    faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
+    faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5, minSize=(30,30))
 
     #If no faces were found tweak parameters
     if len(faces) == 0:
-        faces = faceCascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5)
+        faces = faceCascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5, minSize=(30,30))
     if len(faces) == 0:
-        faces = faceCascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+        faces = faceCascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30,30))
     if len(faces) == 0:
-        faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=6)
-    if len(faces) == 0:
-        faces = faceCascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=3)
+        faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=6, minSize=(30,30))
+
 
     # Draw a rectangle around the faces
     for (x, y, w, h) in faces[::-1]:
         print("Found a face!")
         #Resize image to 120 pixels
-        cropped = gray[y:y+h, x:x+w]
-        final = np.array(cv2.resize(cropped, (120,120)))
+        cropped = gray[y-20:y+h+20, x:x+w]
+        final = np.array(cv2.resize(cropped, (100,100)))
         # cv2.imshow( "Display WIndow" , final)
         # cv2.waitKey(0)
 

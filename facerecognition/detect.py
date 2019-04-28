@@ -50,7 +50,6 @@ def detect_face(path=os.curdir):
 	return (np.array(data), np.array(labels))
 
 
-
 def detect_face_file(file):
 	final = []
 	cascPath = "haarcascade_frontalface_default.xml"
@@ -65,11 +64,8 @@ def detect_face_file(file):
 		print("Found a face!")
 		#Resize image to 120 pixels
 		cropped = gray[y:y+h, x:x+w]
-		final = np.array(cv2.resize(cropped, (120,120)))
+		final = np.array(cv2.resize(cropped, (100,100)))
 	return final
-
-
-
 
 #Main function
 if __name__ == '__main__':

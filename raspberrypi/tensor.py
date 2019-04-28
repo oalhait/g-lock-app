@@ -33,11 +33,11 @@ class Neuron_Network(object):
 			#Second Hidden Layer
 			keras.layers.Dense(self.neurons2, activation="sigmoid"),
 			#Output Layer
-			keras.layers.Dense(self.out_neurons, activation="softmax")])
+			keras.layers.Dense(self.out_neurons, activation="sigmoid")])
 
 	def predict(self, imagepath):
 		#np.divide(detect_face_file(imagepath), 255.0)
-		img = np.divide(detect_face_file(imagepath), 255.0)
+		img = detect_face_file(imagepath)
 		image = (np.expand_dims(img,0))
 		prediction = self.model.predict(image)
 		print(prediction[0])
@@ -73,10 +73,11 @@ if __name__ == '__main__':
 	# iterator = dataset.make_initializable_iterator()
 
 	# in_data, labels, valdata, vallabel = detect_face()
-	in_data = np.load("datadec.npy")
-	labels = np.load("labeldec.npy")
-	valdata = np.load("valdatadec.npy")
-	vallabel = np.load("validlabeldec.npy")
+	in_data = np.load("datas.npy")
+	labels = np.load("labelss.npy")
+	valdata = np.load("valdatas.npy")
+	vallabel = np.load("validlabels.npy")
+	print(vallabel.shape)
 
 	#255 instead of decimals
 	# in_data = np.load("data.npy")
@@ -86,15 +87,16 @@ if __name__ == '__main__':
 
 	#Initialize model based on architecture we desire
 	NN = Neuron_Network(input_layer, first_hidden, second_hidden, output_layer)
+	print(NN.square_root)
 
 	#Compile model by setting all correct parameters
 	NN.model.compile(optimizer="sgd", 
 						loss='sparse_categorical_crossentropy', 
 						metrics=['accuracy'])
 	
-	NN.model.fit(x=in_data, y=labels, validation_data=(valdata, vallabel), epochs=epoch)
+	NN.model.fit(x=in_data, y=labels, shuffle=True, validation_data=(valdata, vallabel), epochs=epoch)
 
-	file_name = str(input_layer)+","+str(first_hidden)+","+str(second_hidden)+","+str(output_layer)+","+str(epoch)+"xd"
+	file_name = str(input_layer)+","+str(first_hidden)+","+str(second_hidden)+","+str(output_layer)+","+str(epoch)+"si"
 
 	NN.model.save(file_name)
 

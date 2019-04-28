@@ -1,47 +1,50 @@
-import time
+from time import sleep, time
 from flask import Flask, flash, redirect, render_template, request, session, abort, Response
 import grpc
-import os
+from os import urandom
 import lock_pb2
 import lock_pb2_grpc
 import RPi.GPIO as GPIO 
 import numpy as np
 import board
-import neopixel
+from neopixel import GRB, NeoPixel
 from concurrent import futures
 from threading import Thread, currentThread, Event    # Multi-threading
-import shlex, subprocess
+# import shlex, subprocess
 import KEYPAD as keypad
 import LED as led
 # import STRIP as strip
 import ULTRASONIC as sonic
-import grpc
 import lock_pb2
 import lock_pb2_grpc
 import UTILS as utils
 from imutils.video import VideoStream
 from imutils.video import FPS
-from nn import find_face
-import imutils
-import cv2 as opencv
-import urllib.request
-import io
-import picamera
-import logging
-import socketserver
-from http import server
 from imutils.video.pivideostream import PiVideoStream
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+from nn import load_model
+import tensorflow as tf
+from tensorflow import keras
+import cv2 as opencv
+from io import BytesIO
+from socketserver import ThreadingMixIn
+from http import server
 from threading import Condition
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 output = None
-
-
+model = None
  
+
 class Glock(object):
     def __init__(self):
         self.code = utils.get_code()
-        print("CURRENT CODE:", self.code)
+        print("CURRENT KP CODE:", self.code)
+
+        self.result_count = 0
+        self.names = ["Joel", "Obed", "Malcolm", "Omar", "Chris", "Chinny"]
 
         #thread variables
         self.kp_thread = None
@@ -70,6 +73,7 @@ class Glock(object):
         self.bytes = None
         self.key = None
         self.fps = None
+        self.reset_active = False
         self.result_count = None
         self.frame_counter = 0
         self.verification_frame_count = 0
@@ -78,8 +82,8 @@ class Glock(object):
         # NeoPixel Setup
         self.pixel_pin = board.D21
         self.num_pixels = 60
-        self.ORDER = neopixel.GRB
-        self.pixels = neopixel.NeoPixel(self.pixel_pin, self.num_pixels, brightness=0.2, auto_write=False,
+        self.ORDER = GRB
+        self.pixels = NeoPixel(self.pixel_pin, self.num_pixels, brightness=0.2, auto_write=False,
                                    pixel_order=self.ORDER)
 
         #setup GPIO pins
@@ -97,25 +101,72 @@ class Glock(object):
         GPIO.setup(self.GPIO_STRIKE, GPIO.OUT)
         GPIO.setup(self.LED_PIN,GPIO.OUT) # LED pin
 
+    def detect_face_frame(self, image):
+        final = []
+        cascPath = "haarcascade_frontalface_default.xml"
+        # Create the haar cascade
+        faceCascade = opencv.CascadeClassifier(cascPath)
+        gray = opencv.cvtColor(image, opencv.COLOR_BGR2GRAY)
+
+        print("frame processing...")
+        # cv2.destroyAllWindows()
+        # Detect faces in the image
+        faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
+
+        #If no faces were found tweak parameters
+        if len(faces) == 0:
+            faces = faceCascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5)
+        if len(faces) == 0:
+            faces = faceCascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+        if len(faces) == 0:
+            faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=6)
+        if len(faces) == 0:
+            faces = faceCascade.detectMultiScale(gray, scaleFactor=1.15, minNeighbors=3)
+
+        # Draw a rectangle around the faces
+        for (x, y, w, h) in faces[::-1]:
+            print("Found a face!")
+            #Resize image to 120 pixels
+            cropped = gray[y:y+h, x:x+w]
+            final = np.array(opencv.resize(cropped, (100,100)))
+
+            opencv.imshow( "Display WIndow" , final)
+            opencv.waitKey(0)  
+            opencv.destroyAllWindows()
+        return final
+
+    def find_face(self, img):
+        global model
+        face = self.detect_face_frame(img)
+        #If no face found
+        if face == []:
+            return 0
+        
+        image = (np.expand_dims(face,0))
+        prediction = model.predict(image)
+        print(prediction[0])
+        guess = np.argmax(prediction[0])
+        print(self.names[guess])
+        return 1
 
     def distance(self):
         #set Trigger to HIGH
         GPIO.output(self.GPIO_TRIGGER, True)
                     
         # set Trigger after 0.01ms to LOW
-        time.sleep(0.00001)
+        sleep(0.00001)
         GPIO.output(self.GPIO_TRIGGER, False)
                        
-        StartTime = time.time()
-        StopTime = time.time()
+        StartTime = time()
+        StopTime = time()
                                            
         # save StartTime
         while GPIO.input(self.GPIO_ECHO) == 0:
-            StartTime = time.time()
+            StartTime = time()
                                                    
         # save time of arrival
         while GPIO.input(self.GPIO_ECHO) == 1:
-            StopTime = time.time()
+            StopTime = time()
                                                                                     
         # time difference between start and arrival
         TimeElapsed = StopTime - StartTime
@@ -136,12 +187,12 @@ class Glock(object):
         for i in range(60):
             self.pixels[i] = (0, 125, 0)
             self.pixels.show()
-            time.sleep(.01)
+            sleep(.01)
 
         for i in range(60):
             self.pixels[60-i-1] = (0, 50, 0)
             self.pixels.show()
-            time.sleep(.01)
+            sleep(.01)
 
 
     def led_unlock_fail(self):
@@ -154,13 +205,13 @@ class Glock(object):
             for i in range(20):
                 self.pixels.fill((225-i, 0, 0))
                 self.pixels.show()
-                time.sleep(.0005)
-        time.sleep(.5)
+                sleep(.0005)
+        sleep(.5)
 
 
     def restart_idle(self):
         #Function to restart IDLE LED Thread
-        time.sleep(1)
+        sleep(1)
 
         self.idle_stop_signal = Event()
         self.idle_blue_signal.clear()
@@ -177,46 +228,49 @@ class Glock(object):
                 for i in range(60):
                     self.pixels[i] = (0, 0, 125)
                     self.pixels.show()
-                    time.sleep(.01)
+                    sleep(.01)
 
                 for i in range(60):
                     self.pixels[60-i-1] = (0, 0, 50)
                     self.pixels.show()
-                    time.sleep(.01)
+                    sleep(.01)
             else:
                 for i in range(60):
                     self.pixels[i] = (125, 125, 125)
                     self.pixels.show()
-                    time.sleep(.01)
+                    sleep(.01)
 
                 for i in range(60):
                     self.pixels[60-i-1] = (50, 50, 50)
                     self.pixels.show()
-                    time.sleep(.01)
+                    sleep(.01)
 
 
     def Validated(self):
         #add mutex on gpio ops?
         #activate strike for 10 sec
         GPIO.output(self.GPIO_STRIKE,GPIO.HIGH)
-        self.led_unlock_success() #light LEDs
-
-        time.sleep(16)
-        GPIO.output(self.GPIO_STRIKE,GPIO.LOW)
         print("GLOCK STRIKE ACTIVATED")
+
+        self.led_unlock_success() #light LEDs
+        sleep(16)
+        GPIO.output(self.GPIO_STRIKE,GPIO.LOW)
+        self.ran_validation=True
+
         
 
     def Invalidated(self):
         #add mutex on gpips?
         self.led_unlock_fail()
-
+        self.ran_validation = True
+        print("heyy")
 
 
     def setup_stream(self):
         global output
 
         while not self.stream_stop_signal.wait(0):
-            with picamera.PiCamera(resolution='640x480', framerate=24) as self.camera:
+            with PiCamera(resolution='640x480', framerate=24) as self.camera:
                 # server = StreamingServer(('0.0.0.0', 8000), StreamingHandler)
                 # server_thread = Thread(target=server.serve_forever)
                 output = StreamingOutput()
@@ -224,57 +278,52 @@ class Glock(object):
                 #camera.rotation = 90
                 # camera.start_preview()
                 self.camera.start_recording(output, format='mjpeg', splitter_port=1, quality=0)
-                time.sleep(_ONE_DAY_IN_SECONDS)
+                sleep(_ONE_DAY_IN_SECONDS)
         self.camera.stop_recording()
 
 
     def CameraHandler(self):
-        print("Starting CameraHandler...")
+        global model
+        model = tf.keras.models.load_model("10000,3000,50,6,70si")
+        print("Enter CameraHandler...")
+        self.result_count = 0
         while not self.camera_stop_signal.wait(0):
-            if (self.verification_frame_count % 3 == 0):
-                self.camera.capture("test_image.jpg", format='jpeg', use_video_port=True, splitter_port=2, quality=100)
-                # camera.capture('foo' + str(count) +'.jpg', use_video_port=True, splitter_port=2, quality=100)
-                # print(image[1])
-                # print(np.shape(image))
-                # print(self.camera.resolution)
-                # temp_image = opencv.imread("test_image.jpg")
-                # opencv.imshow("Frame", temp_image)
-                # # time.sleep(2)
-                # opencv.waitKey(1) & 0xFF
-                # opencv.destroyAllWindows()
-                result = find_face("test_image.jpg")
+            if self.system_active_idle == False or self.reset_active:
+                continue
+            if (self.verification_frame_count % 2 == 0):
+                rawCapture = PiRGBArray(self.camera, size=(640,480))
+                sleep(0.1)
+                self.camera.capture(rawCapture, format="bgr", use_video_port=True, splitter_port=2)
+                image = rawCapture.array
+   
+                result = self.find_face(image)
+
+                rawCapture.truncate(0)
                 if result == 0:
                     print("NO FACE FOUND")
                     continue
                 elif result == -1:
+                    self.result_count -= 1
                     print("INCORRECT FACE FOUND")
 
                 elif result == 1:
-
+                    self.result_count += 1
                     print("RESIDENT FACE FOUND")
-                self.result_count += 1
+                    
                 if (self.result_count == 2): 
                     self.Validated()
-                    self.ran_validation = True
-                    return
-
+                    self.result_count = 0
                 elif (self.result_count == -2):
                     self.Invalidated()
-                    self.ran_validation = True
-                    return
-
+                    self.result_count = 0
                 else:
                     continue
             self.verification_frame_count += 1
             # count +=1
             # #call verification on captured image
 
-           
 
-
-
-
-    def KeypadHandler(self):
+        def KeypadHandler(self):
         print("Enter KeypadHandler")
 
         code_as_list = list(self.code)
@@ -351,8 +400,6 @@ class Glock(object):
                         #flash red
                         self.Invalidated()
                     
-                    self.ran_validation = True
-
                     new_code_list = list()
 
 
@@ -369,8 +416,6 @@ class Glock(object):
                             print("Invalidated")
                             self.Invalidated()
 
-
-                        self.ran_validation = True
             else:
                 continue
      
@@ -381,23 +426,25 @@ class Glock(object):
 
 
     def MainHandler(self):
-        print("Enter Main")
+        print("Enter Main MainHandler...")
         # distances = [1000,1000,1000] #track last three disances 
 
         #create queue of seen distances
         distances = [0,0]
         d_count = 0 
         d_max = 0 
+
         while not self.main_stop_signal.wait(0):
-            print('loop')
-            time.sleep(1)
+            sleep(1)
             distance = self.distance()
             distances[d_count%2] = distance
             d_count += 1
             print ("Measured Distance = %.1f cm" % distance)
-            print(self.system_active_idle)
-            print(self.ran_validation)
+            # print(self.system_active_idle)
+            # print(self.ran_validation)
             if(max(distances) < 60 and self.system_active_idle==False): #start process for camera and LED
+                print("idlewake")
+
                 self.system_active_idle=True
 
                 self.restart_idle()
@@ -406,14 +453,9 @@ class Glock(object):
                 self.kp_thread = Thread(target=self.KeypadHandler)
                 self.kp_thread.start()
 
-                self.camera_stop_signal = Event()
-                self.camera_thread = Thread(target=self.CameraHandler)
-                self.camera_thread.start()
 
-
-                print("idlewake")
             elif(max(distances)<60 and self.ran_validation==True):
-
+                print("ran validation, restarting idle")
                 #clear pixels
                 self.pixels.fill((0, 0, 0))
                 self.pixels.show()
@@ -421,16 +463,15 @@ class Glock(object):
                 #restart the killed idle thread
 
                 self.restart_idle()
-
                 self.ran_validation = False
 
-            elif(max(distances) > 60 and self.system_active_idle==True): #close ML and turn off LED
+            elif(min(distances) > 60 and self.system_active_idle==True): #close ML and turn off LED
+                print("no motion detected...close idle")
                 self.system_active_idle=False
 
                 self.idle_blue_signal.clear()
                 self.idle_stop_signal.set()
                 self.kp_stop_signal.set()
-                self.camera_stop_signal.set()
 
                 self.idle_thread.join()
 
@@ -438,20 +479,20 @@ class Glock(object):
                 self.kp_thread.join()
                 print("kp joined")
 
-                self.camera_thread.join()
-                print("camera joined")
-
                 self.pixels.fill((0, 0, 0))
                 self.pixels.show()
+
+                self.ran_validation = False
         try:
+            self.camera_stop_signal.set()
+            self.camera_thread.join()
+            print("camera joined")
             self.idle_stop_signal.set() #stop self.idle_thread when main function exits
             self.idle_thread.join()
         except:
             return
 
-                
-
-
+            
     def run(self):
 
         #clear pixels
@@ -462,58 +503,43 @@ class Glock(object):
         self.stream_stop_signal = Event()
         self.stream_thread = Thread(target=self.setup_stream)
         self.stream_thread.start()
-        print("22222222222222222222222222222")
 
         self.keypad = keypad.keypad_setup()
         self.GPIO_TRIGGER, self.GPIO_ECHO = sonic.sonic_setup()
 
-
-        print("33333333333333333333333333333333")
-
-
-        # self.camera_stop_signal = Event()
-        # self.camera_thread = Thread(target=self.CameraHandler)
-        # self.camera_thread.start()
-
-        print("44444444444444444444444444444444")
-
+        self.camera_stop_signal = Event()
+        self.camera_thread = Thread(target=self.CameraHandler)
+        self.camera_thread.start()
 
         self.main_stop_signal = Event()
         self.main_thread = Thread(target=self.MainHandler)
         self.main_thread.start()
 
-        print("5555555555555555555555555")
 
 
+        print("G_LOCK HAS BEEN STARTED")
 
 
-    def stream_serve(self):
-        p0 = subprocess.call(['sudo', 'pkill', 'uv4l']) #exit any hanging uv4l processes
+    # def stream_serve(self):
+    #     p0 = subprocess.call(['sudo', 'pkill', 'uv4l']) #exit any hanging uv4l processes
 
-        command = "sudo uv4l -nopreview --auto-video_nr --driver raspicam --encoding mjpeg --width 640 --height 480 --framerate 20 --server-option '--port=2020' --server-option '--max-queued-connections=30' --server-option '--max-streams=25' --server-option '--max-threads=29'"
-        args = shlex.split(command)
-        p1 = subprocess.Popen(args) #start streaming server 
+    #     command = "sudo uv4l -nopreview --auto-video_nr --driver raspicam --encoding mjpeg --width 640 --height 480 --framerate 20 --server-option '--port=2020' --server-option '--max-queued-connections=30' --server-option '--max-streams=25' --server-option '--max-threads=29'"
+    #     args = shlex.split(command)
+    #     p1 = subprocess.Popen(args) #start streaming server 
 
-        print("BEGIN UV4L STREAMING")
+    #     print("BEGIN UV4L STREAMING")
 
 
     def kill(self):
         self.killed = True
 
-        print("stopping threads")
-        # self.camera_stop_signal.set()
-
+        print("GLOCK KILL: Stopping threads")
 
         self.main_stop_signal.set()
+        self.stream_stop_signal.set()
 
-        # self.camera_thread.join()
-
+        self.stream_thread.join()
         self.main_thread.join()
-
-
-        #kill streaming server process
-        print("Killing Stream Process")
-        subprocess.call(['sudo', 'pkill', 'uv4l']) #exit any uv4l processes
 
         #clear pixels
         self.pixels.fill((0, 0, 0))
@@ -522,19 +548,16 @@ class Glock(object):
 
 class GlockServer(lock_pb2_grpc.GLOCKServicer):
     def Unlock(self, request, context):
-        print("RPC Server Received Unlock")
         # led.LED_on() #switch unlock 
         glock.Validated()
-        glock.ran_validation = True
         # self.ran_validation = True/
-        time.sleep(3)
+        sleep(3)
         #     #clear pixels
         glock.pixels.fill((0, 0, 0))
         glock.pixels.show()
         return lock_pb2.GlockResponse(message='Server Unlocked Strike')
 
 def serve(stop_signal):
-    # s = currentThread()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     lock_pb2_grpc.add_GLOCKServicer_to_server(GlockServer(), server)
     server.add_insecure_port('[::]:50051')
@@ -542,13 +565,31 @@ def serve(stop_signal):
     print("RPC Server Started")
 
     while not stop_signal.isSet():
-        print("not")
-
-        time.sleep(_ONE_DAY_IN_SECONDS)
+        sleep(_ONE_DAY_IN_SECONDS)
         continue
     print("rpcserver stop")
     server.stop(0) 
 
+class StreamingOutput(object):
+    def __init__(self):
+        self.frame = None
+        self.buffer = BytesIO()
+        self.condition = Condition()
+
+    def write(self, buf):
+
+        if buf.startswith(b'\xff\xd8'):
+            # New frame, copy the existing buffer's content and notify all
+            # clients it's available
+            self.buffer.truncate()
+            with self.condition:
+                self.frame = self.buffer.getvalue()
+            self.buffer.seek(0)
+        return self.buffer.write(buf)
+
+class StreamingServer(ThreadingMixIn, server.HTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
 
 app = Flask(__name__)
 
@@ -595,42 +636,16 @@ def video_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-
-class StreamingOutput(object):
-    def __init__(self):
-        self.frame = None
-        self.buffer = io.BytesIO()
-        self.condition = Condition()
-
-    def write(self, buf):
-
-        if buf.startswith(b'\xff\xd8'):
-            # New frame, copy the existing buffer's content and notify all
-            # clients it's available
-            self.buffer.truncate()
-            with self.condition:
-                self.frame = self.buffer.getvalue()
-            self.buffer.seek(0)
-        return self.buffer.write(buf)
-
-
-class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
-    allow_reuse_address = True
-    daemon_threads = True
-
-
-
-
-
 if __name__ == '__main__':
     try:          
         rpc_stop_signal = Event()
         rpc_thread = Thread(target=serve, args=(rpc_stop_signal,))
         rpc_thread.start()
         glock = Glock()
+        #Neural Network
         glock.run()
         
-        app.secret_key = os.urandom(12)
+        app.secret_key = urandom(12)
         # video_camera = VideoCamera() # creates a camera object, flip vertically
         app.run(host='0.0.0.0', debug=True, use_reloader=False, threaded=True)
         print("running1")
@@ -641,92 +656,3 @@ if __name__ == '__main__':
         rpc_thread.join()
         print("joined")
         glock.kill()
-
-
-    # try:
-    #     # server_thread.start()
-    #     # count = 0
-    #     # while True:
-    #     #     time.sleep(10)
-    #     #     camera.capture('foo' + str(count) +'.jpg', use_video_port=True, splitter_port=2)
-    #     #     count +=1
-    # finally :
-
-    # def CameraHandler(self):
-    #     # initialize the video stream and allow the camera sensor to warm up
-    #     print("Starting CameraHandler...")
-    #     # vs = VideoStream(usePiCamera=True).start()
-    #     # vs=cv2.VideoCapture('http://192.168.1.56:2020/video.mjpeg')
-
-    #     self.stream = urllib.request.urlopen('http://192.168.1.56:2020/stream/video.mjpeg')
-
-    #     # stream=open("192.168.1.56:2020/stream/video.mjpeg")
-
-    #     self.bytes=b''
-    #     time.sleep(2.0)
-         
-    #     # start the FPS counter
-    #     self.fps = FPS().start()
-    #     self.frame_counter += 1
-
-    #     self.result_count = 0 #dont verfiy until three frames are in agreement
-    #     while not self.camera_stop_signal.wait(0):
-    #         # ret, frame = vs.read()
-    #         # display the image to our screen
-    #         # to read mjpeg frame -
-    #         self.bytes+=self.stream.read(1024)
-    #         a = self.bytes.find(b'\xff\xd8')
-    #         b = self.bytes.find(b'\xff\xd9')
-    #         if a!=-1 and b!=-1:
-    #             jpg = self.bytes[a:b+2]
-    #             self.bytes= self.bytes[b+2:]
-    #             self.frame = opencv.imdecode(np.fromstring(jpg, dtype=np.uint8),opencv.IMREAD_COLOR)
-    #             # we now have frame stored in frame.
-    #             print(self.frame)
-    #             window_name = "Frame" + str(self.frame_counter)
-    #             opencv.imshow(window_name , self.frame)
-    #             print("EEEEEEEEEEEEEEEEEE")
-
-    #             self.key = opencv.waitKey(1) & 0xFF
-    #             self.fps.update()
-    #             opencv.destroyAllWindows()
-
-
-
-    #         # update the FPS counter
-    #         # result_count += find_face(frame)
-
-    #         if (self.result_count == 3): 
-    #             self.Validated()
-    #             self.ran_validation = True
-    #             return
-
-
-    #         elif (self.result_count == -3):
-    #             self.Invalidated()
-    #             self.ran_validation = True
-    #             return
-
-    #         else:
-    #             continue
-
-
-
-    #     # stop the timer and display FPS information
-    #     self.fps.stop()
-    #     print("[INFO] elasped time: {:.2f}".format(self.fps.elapsed()))
-    #     print("[INFO] approx. FPS: {:.2f}".format(self.fps.fps()))
-         
-    #     # do a bit of cleanup
-    #     self.frame = None
-    #     self.stream.close()
-
-    # try:
-    #     server_thread.start()
-
-    #     while True:
-    #         time.sleep(1)
-    #         camera.capture(image, use_video_port=True, splitter_port=2)
-
-    # finally :
-    #     camera.stop_recording()
