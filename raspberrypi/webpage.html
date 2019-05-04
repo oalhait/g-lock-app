@@ -51,48 +51,6 @@
     <script type="text/javascript" src="js/materialize.min.js"></script>
     <script type="text/javascript" src="js/init.js"></script>
     
-	<script src="../static/jquery-2.1.4.min.js"></script>
-	<script src="../static/jquery.magnific-popup.js"></script>
-	<script>
-			$(document).ready(function() {
-			$('.w3_play_icon,.w3_play_icon1,.w3_play_icon2').magnificPopup({
-				type: 'inline',
-				fixedContentPos: false,
-				fixedBgPos: true,
-				overflowY: 'auto',
-				closeBtnInside: true,
-				preloader: false,
-				midClick: true,
-				removalDelay: 300,
-				easing: 'ease-in-out', 
-				mainClass: 'my-mfp-zoom-in'
-			});
-																			
-			});
-	</script>
 
-	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-	<script type=text/javascript>
-	        $(function() {
-	          $('.go').bind('click', function() {
-	            $.getJSON('/unlock_request',
-	                function(data) {
-	              //do nothing
-	            });
-	        return false;
-	      });
-	    });
-	</script>
-	<script type=text/javascript>
-	        $(function() {
-	          $('.logo').bind('click', function() {
-	            $.getJSON('/logout',
-	                function(data) {
-	              //do nothing
-	            });
-	        return false;
-	      });
-	    });
-	</script>
 </body>
 </html>
