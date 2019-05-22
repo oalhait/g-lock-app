@@ -1,0 +1,18 @@
+.bs {
+	display: block !important;
+}
+
+.cover {
+	/*width:80vw;*/
+	/*height:60vh;*/
+}
+
+.shift {
+	font-size: 15px;
+}
+
+button {
+	background-color: transparent !important;
+	border-color: transparent !important;
+	color: white !important;
+}

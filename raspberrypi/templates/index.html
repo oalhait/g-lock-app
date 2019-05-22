@@ -9,55 +9,32 @@
 <script type="application/x-javascript"> addEventListener("load", function() { setTimeout(hideURLbar, 0); }, false);
 function hideURLbar(){ window.scrollTo(0,1); } </script>
 <!-- Meta tag Keywords -->
-<link rel="stylesheet" href="../static/style.css" type="text/css" media="all" /><!-- Style-CSS -->
-<link rel="stylesheet" href="../static/font-awesome.min.css" type="text/css" media="all" />
-<link href="../static/popup-box.css" rel="stylesheet" type="text/css" media="all" />
-<link href="//fonts.googleapis.com/css?family=Gafata" rel="stylesheet">
-<link href="//fonts.googleapis.com/css?family=PT+Sans" rel="stylesheet">
+<!-- <link rel="stylesheet" href="../static/style.css" type="text/css" media="all" /> -->
+<!-- <link rel="stylesheet" href="../static/font-awesome.min.css" type="text/css" media="all" /> -->
+<!-- <link href="../static/popup-box.css" rel="stylesheet" type="text/css" media="all" /> -->
+<link href="https://fonts.googleapis.com/css?family=PT+Sans" rel="stylesheet">
+<link rel="stylesheet" type="text/css" href="../static/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="../static/styles.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-<section  class="agile-main">
-	<header><h1>Welcome to G-Lock</h1></header>
-</section>
-
 <!-- <video width="320" height="240" align="center" controls>
   <source src="http://192.168.1.56:9090/stream/video.mjpeg" type="video/mjpeg">
   Your browser does not support the video tag.
 </video>
  -->
-<div class="div_img">
-<!-- 	<img class="vid_img" src="http://192.168.1.56:8000/stream.mjpeg" alt="image" width="853" height="480"> -->
 
-<img id="vid_img" alt="image" width="853" height="480" src="{{ url_for('video_feed') }}">
-
-</div>
-
-<section  class="agile-main">
-	<div class="agile-top">
-		<span>Live G-Lock Video Feed</span>
-	</div>
-
-	<div class="agile-buttons">
-		<form action="/unlock_request/" method="post">
-    		<button class="go" type="submit"><a>Unlock</a></button>
-		</form>
-	</div>
-	<div class="agile-buttons">
-
-		<button class="us"><a  class="w3_play_icon1" href="#">View Logs</a></button>
-	</div>
+<!-- <section  class="agile-main">
 	<div class="agile-buttons">
 		<form action="/logout/" method="post">
     		<button class="logo" type="submit"><a>Logout</a></button>
 		</form>
 	</div>
-<!-- 	<div class="footer">
-			<p>&copy; 2018 connect error page. All rights reserved | Design by <a href="http://w3layouts.com" target="_blank">W3layouts</a></p>
-		</div> -->
 </section>
-<div id="small-dialog1" class="mfp-hide">
+ -->
+<!-- <div id="small-dialog1" class="mfp-hide">
 <div class="header-form1">
-<div class="flat-left">
+		<div class="flat-left">
 			<h2>contact us</h2>
 			<span>please fill out this form we will get back you shortly</span>
 			<form action="#" method="post">
@@ -78,50 +55,108 @@ function hideURLbar(){ window.scrollTo(0,1); } </script>
 		</div>
 
 </div>	
-</div>
-<script src="../static/jquery-2.1.4.min.js"></script>
-<script src="../static/jquery.magnific-popup.js"></script>
-<script>
-		$(document).ready(function() {
-		$('.w3_play_icon,.w3_play_icon1,.w3_play_icon2').magnificPopup({
-			type: 'inline',
-			fixedContentPos: false,
-			fixedBgPos: true,
-			overflowY: 'auto',
-			closeBtnInside: true,
-			preloader: false,
-			midClick: true,
-			removalDelay: 300,
-			easing: 'ease-in-out', 
-			mainClass: 'my-mfp-zoom-in'
-		});
-																		
-		});
-</script>
+</div> -->
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-<script type=text/javascript>
-        $(function() {
-          $('.go').bind('click', function() {
-            $.getJSON('/unlock_request',
-                function(data) {
-              //do nothing
-            });
-        return false;
-      });
-    });
-</script>
-<script type=text/javascript>
-        $(function() {
-          $('.logo').bind('click', function() {
-            $.getJSON('/logout',
-                function(data) {
-              //do nothing
-            });
-        return false;
-      });
-    });
-</script>
+    <ul id="dropdown1" class="dropdown-content">
+        <li><a id="homeMenu" href="#">Home</a></li>
+        <li><a id="searchMenu" href="#">Matches</a></li>
+        <li><a id="profileMenu" href="#">Profile</a></li>
+        <li><a id="loginMenu" href="#">Login</a></li>
+        <li><a id="logoutMenu" href="#">Logout</a></li>
+    </ul>
+    <nav>
+        <div class="nav-wrapper">
+            <a href="#" data-target="slide-out" class="left sidenav-trigger bs"><i class="material-icons">menu</i></a>
+            <a href="#" class="brand-logo center">G-LOCK</a>
+                <ul id="nav-mobile" class="right hide-on-med-and-down">
+                    <li><a href="sass.html">History</a></li>
+                    <li><a href="badges.html">Record</a></li>
+                    <li><a href="collapsible.html">Settings</a></li>
+                </ul>
+        </div>
+    </nav>
+
+
+    <ul id="slide-out" class="sidenav">
+        <li>
+            <a href="#" class="teal darken-1 center-align">
+            	<form action="/unlock_request/" method="post">
+	            	<span class="white-text center-align">
+	            		<button class="go" type="submit">Unlock <i class="material-icons shift">lock_open</i></button>
+	            	</span>
+            	</form>
+            </a>
+            <a href="#" class="blue darken-1 center-align">
+            	<span class="white-text center-align">
+            		<button>Log <i class="material-icons shift">event_note</i></button>
+            	</span>
+            </a>
+    		<form action="/logout/" method="post">
+    			<button class="logo" type="submit"><a>Logout</a></button>
+    		</form>
+
+        </li>
+        <li><div class="divider"></div></li>
+        <li><a class="subheader center-align"><i class="material-icons shift">settings</i>settings</a></li>
+    </ul>
+    <!-- <a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a> -->
+
+    <div class="container">
+        <div class="col s4 center">
+			<img id="vid_img" alt="image" width="853" height="480" src="{{ url_for('video_feed') }}">
+        </div>
+    </div>
+    <div class="container">
+	<div class="col s4 center">
+		<pre>{{ content }}</pre>	
+	</div>
+    </div>
+
+
+	<script src="../static/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="../static/materialize.min.js"></script>
+    <script type="text/javascript" src="../static/init.js"></script>
+	<script src="../static/jquery.magnific-popup.js"></script>
+	<script>
+			$(document).ready(function() {
+			$('.w3_play_icon,.w3_play_icon1,.w3_play_icon2').magnificPopup({
+				type: 'inline',
+				fixedContentPos: false,
+				fixedBgPos: true,
+				overflowY: 'auto',
+				closeBtnInside: true,
+				preloader: false,
+				midClick: true,
+				removalDelay: 300,
+				easing: 'ease-in-out', 
+				mainClass: 'my-mfp-zoom-in'
+			});
+																			
+			});
+	</script>
+
+	<!-- <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script> -->
+	<script type=text/javascript>
+	        $(function() {
+	          $('.go').bind('click', function() {
+	            $.getJSON('/unlock_request',
+	                function(data) {
+	              //do nothing
+	            });
+	        return false;
+	      });
+	    });
+	</script>
+	<script type=text/javascript>
+	        $(function() {
+	          $('.logo').bind('click', function() {
+	            $.getJSON('/logout',
+	                function(data) {
+	              //do nothing
+	            });
+	        return false;
+	      });
+	    });
+	</script>
 
 </body>
-</html>

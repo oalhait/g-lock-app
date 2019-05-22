@@ -5,8 +5,8 @@ def sonic_setup():
     #GPIO Mode (BOARD / BCM)
     GPIO.setmode(GPIO.BCM)
      #set GPIO Pins
-    GPIO_TRIGGER = 5 
-    GPIO_ECHO = 6
+    GPIO_TRIGGER =13 
+    GPIO_ECHO = 19
        
     #set GPIO direction (IN / OUT)
     GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
@@ -41,14 +41,15 @@ def distance(GPIO_TRIGGER, GPIO_ECHO):
                                                                                                      
     return distance
                                                                                                        
-# if __name__ == '__main__':
-#     try:
-#         while True:
-#             dist = distance()
-#             print ("Measured Distance = %.1f cm" % dist)
-#             time.sleep(1)
-                    
-#                                                                                                                               # Reset by pressing CTRL + C
-#     except KeyboardInterrupt:
-#         print("Measurement stopped by User")
-#         GPIO.cleanup()
+if __name__ == '__main__':
+     try:
+         trig, echo = sonic_setup()
+         while True:
+             dist = distance(trig,echo)
+             print ("Measured Distance = %.1f cm" % dist)
+             time.sleep(1)
+                   
+                                                                                                                               # Reset by pressing CTRL + C
+     except KeyboardInterrupt:
+         print("Measurement stopped by User")
+         GPIO.cleanup()

@@ -1,5 +1,5 @@
 from time import sleep, time, strftime
-from flask import Flask, flash, redirect, render_template, request, session, abort, Response
+from flask import Flask, flash, redirect, render_template, request, session, abort, Response, g
 import grpc
 from os import urandom
 import lock_pb2
@@ -38,9 +38,16 @@ import logging
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 output = None
 model = None
-logging.basicConfig(filename="glock.log", filemode='w', level=logging.INFO)
-global VERIFIED_NAME
-VERIFIED_NAME = ""
+
+#logging
+log_handler = logging.StreamHandler()
+log_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+log_handler.setFormatter(formatter)
+
+logger = logging.getLogger()
+logger.addHandler(log_handler)
+GLOBAL_LOG = ""
 
 class Glock(object):
     def __init__(self):
@@ -108,8 +115,7 @@ class Glock(object):
         GPIO.setup(self.LED_PIN,GPIO.OUT) # LED pin
 
     def detect_face_frame(self, image):
-        final1 = []
-        final2 = []
+        final = []
         cascPath = "haarcascade_frontalface_default.xml"
         # Create the haar cascade
         faceCascade = opencv.CascadeClassifier(cascPath)
@@ -130,14 +136,13 @@ class Glock(object):
         for (x, y, w, h) in faces[::-1]:
             print("Found a face!")
             #Resize image to 120 pixels
-            cropped = gray[y-10:y+h+10, x:x+w]
-            final1 = np.array(opencv.resize(cropped, (100,100)))
-            final2 = np.array(opencv.resize(cropped, (120,120)))
+            cropped = gray[y-20:y+h+20, x:x+w]
+            final = np.array(opencv.resize(cropped, (100,100)))
 
-            #opencv.imshow("Display WIndow" , final2)
-            #opencv.waitKey(0)  
-            #opencv.destroyAllWindows()
-        return (final1, final2)
+            opencv.imshow("Display WIndow" , final)
+            opencv.waitKey(0)  
+            opencv.destroyAllWindows()
+        return final
 
     def find_face(self, img):
         global model_sigmoid
@@ -147,19 +152,19 @@ class Glock(object):
         global sig_output_details
         global soft_output_details
         
-        facesig, facesoft = self.detect_face_frame(img)
+        face = self.detect_face_frame(img)
         #If no face found
-        if facesig == []:
+        if face == []:
             return 0, -1
         
         #Sigmoid output
-        sig_input_data = np.reshape(np.array(facesig, dtype=np.float32), sig_input_details[0]['shape'])
+        sig_input_data = np.reshape(np.array(face, dtype=np.float32), sig_input_details[0]['shape'])
         model_sigmoid.set_tensor(sig_input_details[0]['index'], sig_input_data)
         model_sigmoid.invoke()
         sig_output = model_sigmoid.get_tensor(sig_output_details[0]['index'])
         
         #Softmax Output
-        soft_input_data = np.divide(np.reshape(np.array(facesoft, dtype=np.float32), soft_input_details[0]['shape']), 255.0)
+        soft_input_data = np.divide(np.reshape(np.array(face, dtype=np.float32), soft_input_details[0]['shape']), 255.0)
         model_softmax.set_tensor(soft_input_details[0]['index'], soft_input_data)
         model_softmax.invoke()
         soft_output = model_softmax.get_tensor(soft_output_details[0]['index'])
@@ -173,8 +178,7 @@ class Glock(object):
         if sig != soft:
             return -1, -1
         #If not above threshold
-        if sig_output[0][sig] < .1 or soft_output[0][soft] < .9:
-            return -1, -1
+        #elif
         else:
             return 1, sig
 
@@ -281,9 +285,9 @@ class Glock(object):
         #activate strike for 10 sec
         GPIO.output(self.GPIO_STRIKE,GPIO.HIGH)
         print("GLOCK STRIKE ACTIVATED")
+        sendText(True)
 
         self.led_unlock_success() #unlock strike and wait 
-        sendText(True)
         sleep(16) 
         GPIO.output(self.GPIO_STRIKE,GPIO.LOW)
         self.ran_validation=True #send signal to restaart idle thread
@@ -293,8 +297,8 @@ class Glock(object):
     def Invalidated(self):
         #add mutex on gpips?
         print("GLOCK INVALID")
-        self.led_unlock_fail()
         sendText(False)
+        self.led_unlock_fail()
         self.ran_validation = True
         
 
@@ -319,18 +323,19 @@ class Glock(object):
         global sig_output_details
         global soft_output_details
         
-        model_sigmoid = tf.lite.Interpreter(model_path="newsig.tflite")
+        model_sigmoid = tf.lite.Interpreter(model_path="sigmoid.tflite")
         model_sigmoid.allocate_tensors()
         sig_input_details = model_sigmoid.get_input_details()
         sig_output_details = model_sigmoid.get_output_details()
         
-        model_softmax = tf.lite.Interpreter(model_path="newsoft.tflite")
+        model_softmax = tf.lite.Interpreter(model_path="softmax.tflite")
         model_softmax.allocate_tensors()
         soft_input_details = model_softmax.get_input_details()
         soft_output_details = model_softmax.get_output_details()
         
         self.init_done = True
         print("Enter CameraHandler...")
+        log_handler.emit("Enter CameraHandler...")
         self.result_count = 0
 
         while not self.camera_stop_signal.wait(0):
@@ -351,19 +356,20 @@ class Glock(object):
                 rawCapture.truncate(0)
                 if result == 0: #no face found in image
                     print("NO FACE FOUND")
+                    log_handler.emit("NO FACE FOUND")
                     continue
                 elif (result == 1 and self.last == -1) or (result == 1 and self.last == person): #corect face found
                     self.result_count += 1
                     last = person
                     print("RESIDENT FACE FOUND")    
+                    log_handler.emit("RESIDENT FACE FOUND")    
                 else: #face found but incorrect
                     self.result_count -= 1
                     print("INCORRECT FACE FOUND")
+                    log_handler.emit("INCORRECT FACE FOUND")    
                     
                 #need to see the same face twice in order to verify resident   
                 if (self.result_count == 2): 
-                    global VERIFIED_NAME 
-                    VERIFIED_NAME = self.names[person]
                     self.Validated()
                     self.result_count = 0 #reset "correct score"
                     self.last = -1
@@ -381,9 +387,11 @@ class Glock(object):
 
     def KeypadHandler(self):
         print("Enter KeypadHandler")
+        log_handler.emit("Enter KeypadHandler")
 
         code_as_list = list(self.code)
         print("code as list: ", code_as_list)
+        log_handler.emit("code as list: ", code_as_list)
         #create empty buffer for entered code
         entered_code = list()
         new_code_list = list()
@@ -431,6 +439,7 @@ class Glock(object):
                 if looking_new_code: #if case will short to here if alrady entered old code to change to new
                     if len(code_as_list) == len(new_code_list): #get new code 
                         print("new_code",new_code_list)
+                        log_handler.emit("new_code",new_code_list)
 
                         as_string = [str(elem) for elem in new_code_list]   
                         as_string = ''.join(as_string)  
@@ -452,6 +461,7 @@ class Glock(object):
                 elif len(code_as_list) == len(new_code_list): #submit old code for verification
                     verification_res = (new_code_list == [int(i) for i in code_as_list]) #verify list
                     print("old_code", new_code_list, "verified:", str(verification_res))
+                    log_handler.emit("old_code", new_code_list, "verified:", str(verification_res))
                     
                     if verification_res:
                         #flash blue
@@ -479,12 +489,15 @@ class Glock(object):
                         self.kp_active=False
 
                         print("code", entered_code)
+                        log_handler.emit("code", entered_code)
                         verification_res = (entered_code == [int(i) for i in code_as_list]) #verify list
                         if verification_res == True:
                             print("Validated")
+                            log_handler.emit("Validated")
                             self.Validated()
                         else:
                             print("Invalidated")
+                            log_handler.emit("Invalidated")
                             self.Invalidated()
 
             else:
@@ -507,7 +520,7 @@ class Glock(object):
         while not self.init_done:
             continue
         while not self.main_stop_signal.wait(0):
-            sleep(0.35)
+            sleep(0.5)
             distance = self.distance()
             distances[d_count%3] = distance
             d_count += 1
@@ -528,6 +541,7 @@ class Glock(object):
 
             elif(self.ran_validation==True):
                 print("ran validation, restarting idle")
+                log_handler.emit("ran validation, restarting idle")
 
 
 
@@ -545,6 +559,7 @@ class Glock(object):
                 self.ran_validation = False
             elif(min(distances) > 90 and self.system_active_idle==True): #close ML and turn off LED
                 print("no motion detected...close idle")
+                log_handler.emit("no motion detected...close idle")
                 self.system_active_idle=False
 
                 self.idle_blue_signal.clear()
@@ -595,7 +610,8 @@ class Glock(object):
 
 
         print("G_LOCK HAS BEEN STARTED")
-        logging.info("G_LOCK HAS BEEN STARTED")
+        log_handler.emit("G_LOCK HAS BEEN STARTED")
+
 
     # def stream_serve(self):
     #     p0 = subprocess.call(['sudo', 'pkill', 'uv4l']) #exit any hanging uv4l processes
@@ -674,17 +690,13 @@ def homepage():
     if not session.get('logged_in'):
         return render_template('login.html')
     else:
-        with open("glock.log", "r") as f:
-            content = f.read()
-            return render_template('index.html', content=content)
+        return render_template('index.html')
 
 @app.route('/login', methods=['POST'])
 def do_admin_login():
     if request.form['password'] == 'password' and request.form['username'] == 'glock':
         session['logged_in'] = True
-        with open("glock.log", "r") as f:
-            content = f.read()
-            return render_template('index.html', content=content)
+        return render_template('index.html')
     else:
         flash('wrong password!')
         return render_template('login.html')
@@ -710,6 +722,11 @@ def gen():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
+@app.before_request
+def set_up_logging():
+    global log_handler
+    g.log_handler = log_handler
+
 @app.route('/video_feed')
 def video_feed():
     return Response(gen(),
@@ -719,22 +736,17 @@ def sendText(unlock):
     body = ""
     time = strftime("%m/%d/%Y %H:%M")
     if(unlock):
-        body = 'SUCCESS: ' + time + ' Welcome, ' + VERIFIED_NAME + "!"
+        body = 'SUCCESS: ' + time + 'Front door unlocked!'
     else:
-        body = 'FAILED: ' + time + ' Unsuccessful recognition attempted.'
+        body = 'FAILED: ' + time + 'Unsuccessful recognition attempted.'
 
-    account_sid = "ACb951bc7639f942010d564c7b73e328ba"
-    auth_token = "175fde8e1e3aef96d715bda163df83ff"
-    client = Client(account_sid, auth_token)
-    numbers_to_message = ['+14088886246', '+13107384780', '+17086993770']
+    numbers_to_message = ['+14088886246', '+17086993770', '+13107384780']
     for number in numbers_to_message:
-        client.messages.create(
-	    body = body,
-	    from_ = '+18054161977',
-	    to = number
-	)
-
-
+        Client.messages.create(
+            body = body,
+            from_ = '+18054161977',
+            to = number
+        )
 
 
 if __name__ == '__main__':

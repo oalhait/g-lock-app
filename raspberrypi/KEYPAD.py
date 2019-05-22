@@ -50,13 +50,14 @@ def keypad_verify(code, keypad):
  
         print("code", entered_code)
         time.sleep(0.2)
-
-    # while True:
-    #     keys = keypad.pressed_keys
-    #     if keys:
-    #         print("Pressed: ", keys)
-    #     time.sleep(0.1)
+ 
+#keypad =keypad_setup()
+#w#hile True:
+#    keys = keypad.pressed_keys
+ #   if keys:
+  #      print("Pressed: ", keys)
+   #     time.sleep(0.1)
 
 # k = keypad_setup()
 # keypad_verify('1234', k)
-
+#

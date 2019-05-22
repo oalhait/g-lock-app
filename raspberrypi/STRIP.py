@@ -96,34 +96,32 @@ def idle(pixels):
             time.sleep(.01)
 
 
-# time.sleep(1)
+ time.sleep(1)
+ pixels.fill((0, 0, 0))
+ pixels.show()
+ pixels.fill((0, 255, 0))
+ while True:
 
-# pixels.fill((0, 0, 0))
-# pixels.show()
-# pixels.fill((0, 255, 0))
-# while True:
-
-#     for i in range(60):
-#         pixels[i] = (0, 255, 0)
-#         pixels.show()
-#         time.sleep(1)
-
-    # for i in range(num_pixels):
-    #     pixels[num_pixels-i-1] = (255, 255, 255)
-    #     pixels.show()
-    #     time.sleep(.1)
+     for i in range(60):
+         pixels[i] = (0, 255, 0)
+         pixels.show()
+         time.sleep(1)
+     for i in range(num_pixels):
+         pixels[num_pixels-i-1] = (255, 255, 255)
+         pixels.show()
+         time.sleep(.1)
 
 
-# while True:
-#     # Comment this line out if you have RGBW/GRBW NeoPixels
-#     pixels.fill((255, 0, 0))
-#     # Uncomment this line if you have RGBW/GRBW NeoPixels
-#     # pixels.fill((255, 0, 0, 0))
-#     pixels.show()
-#     time.sleep(.5)
+ while True:
+     # Comment this line out if you have RGBW/GRBW NeoPixels
+    pixels.fill((255, 0, 0))
+    # Uncomment this line if you have RGBW/GRBW NeoPixels
+     # pixels.fill((255, 0, 0, 0))
+    pixels.show()
+    time.sleep(.5)
 
 #     # Comment this line out if you have RGBW/GRBW NeoPixels
-#     pixels.fill((0, 255, 0))
+    pixels.fill((0, 255, 0))
 #     # Uncomment this line if you have RGBW/GRBW NeoPixels
 #     # pixels.fill((0, 255, 0, 0))
 #     pixels.show()
